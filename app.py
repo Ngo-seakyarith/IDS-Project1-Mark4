@@ -17,7 +17,9 @@ st.set_page_config(layout="wide", initial_sidebar_state="expanded") # Keep sideb
 # Initialize session state for theme if it doesn't exist
 if 'theme' not in st.session_state:
     st.session_state.theme = 'light' # Default to light theme
-    # Initialize the toggle state key if it doesn't exist, mirroring the theme
+
+# Initialize the toggle state key if it doesn't exist, mirroring the theme
+if 'theme_toggle_main' not in st.session_state:
     st.session_state.theme_toggle_main = (st.session_state.theme == 'dark')
 
 # Theme state is now managed by the toggle in the main area
