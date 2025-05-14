@@ -11,112 +11,121 @@ warnings.filterwarnings("ignore", category=UserWarning, module='sklearn')
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # --- Streamlit Page Configuration (Must be the first Streamlit command) ---
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", initial_sidebar_state="expanded") # Keep sidebar open
 
-# Add custom CSS for modern design
-st.markdown("""
+# --- Theme Management ---
+# Initialize session state for theme if it doesn't exist
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'light' # Default to light theme
+# Initialize the toggle state key if it doesn't exist, mirroring the theme
+if 'theme_toggle_main' not in st.session_state:
+    st.session_state.theme_toggle_main = (st.session_state.theme == 'dark')
+
+# Theme state is now managed by the toggle in the main area
+
+# --- Define CSS Styles ---
+light_theme_css = """
 <style>
-    /* Base theme */
-    [data-testid="stAppViewContainer"] {
-        background: #f0f2f6;
-    }
+    /* --- Light Theme --- */
+    body { background-color: #f0f2f6; color: #1f2937; }
+    [data-testid="stAppViewContainer"] { background: #f0f2f6; }
+    [data-testid="stSidebar"] { background-color: #ffffff; }
 
-    /* Card styling */
-    .custom-card {
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        margin: 10px 0;
-    }
-
-    /* Headers and text */
-    h1, h2, h3, h4, h5, h6 {
-        color: #1e3a8a !important;
-        font-weight: 600 !important;
-        margin-bottom: 0.5em !important;
-    }
-
-    p, li, span {
-        color: #1f2937 !important;
-    }
-
-    /* Prediction box */
-    .prediction-box {
-        background-color: #ffffff;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Prediction text */
-    .prediction-text {
-        color: #1f2937 !important;
-        font-size: 1.1rem;
-        font-weight: 500;
-    }
-
-    /* Score text */
-    .score-text {
-        color: #4b5563 !important;
-        font-size: 1rem;
-    }
-
-    /* Model details */
-    .model-details {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 0.5rem 0;
-    }
-
-    /* Metrics styling */
-    [data-testid="stMetricValue"] {
-        color: #1e3a8a !important;
-        font-weight: 600 !important;
-    }
-
-    [data-testid="stMetricLabel"] {
-        color: #4b5563 !important;
-    }
-
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background-color: #ffffff !important;
-        color: #1f2937 !important;
-    }
-
-    /* Button styling */
-    .stButton button {
-        background-color: #1e3a8a;
-        color: #ffffff;
-        font-weight: 600;
-        padding: 0.5rem 2rem;
-        border-radius: 8px;
-        border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .stButton button:hover {
-        background-color: #1e40af;
-    }
-
-    /* Input area styling */
-    .stTextArea textarea {
+    .custom-card, .prediction-box, .model-details, .streamlit-expanderHeader, .stTextArea textarea {
         background-color: #ffffff;
         color: #1f2937;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        border: 1px solid #e5e7eb; /* Subtle border */
     }
+    .custom-card { padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin: 10px 0; }
+    .prediction-box { padding: 1.5rem; border-radius: 10px; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+    .model-details { padding: 1rem; border-radius: 8px; margin: 0.5rem 0; }
+    .streamlit-expanderHeader { border-radius: 8px; margin-bottom: 5px; }
+    .stTextArea textarea { border-radius: 8px; }
 
-    /* Caption and helper text */
-    .caption-text {
-        color: #6b7280 !important;
-        font-size: 0.875rem;
+    h1, h2, h3, h4, h5, h6 { color: #1e3a8a !important; font-weight: 600 !important; margin-bottom: 0.5em !important; }
+    p, li, span, .prediction-text, .streamlit-expanderHeader { color: #1f2937 !important; }
+    .score-text, [data-testid="stMetricLabel"], .caption-text { color: #4b5563 !important; }
+    .prediction-text { font-size: 1.1rem; font-weight: 500; }
+    .score-text { font-size: 1rem; }
+    .caption-text { font-size: 0.875rem; }
+
+    [data-testid="stMetricValue"] { color: #1e3a8a !important; font-weight: 600 !important; }
+
+    .stButton button {
+        background-color: #1e3a8a; color: #ffffff; font-weight: 600;
+        padding: 0.5rem 2rem; border-radius: 8px; border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .stButton button:hover { background-color: #1e40af; }
+    .stButton button:active { background-color: #1d4ed8; } /* Added active state */
+
+    /* Specific prediction box border color handled inline */
+
+    /* Ensure toggle visibility in light mode - Simpler Approach */
+    .toggle-container div[data-baseweb="toggle"] { /* Target the toggle base element */
+        border: 1px solid #adb5bd !important; /* Add a visible gray border */
+        background-color: #f8f9fa !important; /* Slightly off-white background */
+    }
+    .toggle-container label { /* Ensure label (emoji) is dark */
+         color: #212529 !important;
+         margin-bottom: 0 !important; /* Prevent extra spacing */
+         display: flex !important;
+         align-items: center !important;
+    }
+    /* Optional: Style the knob if needed, might require browser inspection */
+    /* .toggle-container div[data-baseweb="toggle-knob"] { background-color: #ced4da !important; } */
+</style>
+"""
+
+dark_theme_css = """
+<style>
+    /* --- Dark Theme --- */
+    body { background-color: #0f172a; color: #e2e8f0; } /* Dark blue-gray */
+    [data-testid="stAppViewContainer"] { background: #0f172a; }
+    [data-testid="stSidebar"] { background-color: #1e293b; } /* Slightly lighter sidebar */
+
+    .custom-card, .prediction-box, .model-details, .streamlit-expanderHeader, .stTextArea textarea {
+        background-color: #1e293b; /* Dark slate */
+        color: #e2e8f0; /* Light gray text */
+        border: 1px solid #334155; /* Subtle border */
+    }
+    .custom-card { padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); margin: 10px 0; }
+    .prediction-box { padding: 1.5rem; border-radius: 10px; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+    .model-details { padding: 1rem; border-radius: 8px; margin: 0.5rem 0; }
+    .streamlit-expanderHeader { border-radius: 8px; margin-bottom: 5px; }
+    .stTextArea textarea { border-radius: 8px; }
+
+    h1, h2, h3, h4, h5, h6 { color: #93c5fd !important; font-weight: 600 !important; margin-bottom: 0.5em !important; } /* Light blue */
+    p, li, span, .prediction-text, .streamlit-expanderHeader { color: #e2e8f0 !important; } /* Light gray */
+    .score-text, [data-testid="stMetricLabel"], .caption-text { color: #94a3b8 !important; } /* Medium gray */
+    .prediction-text { font-size: 1.1rem; font-weight: 500; }
+    .score-text { font-size: 1rem; }
+    .caption-text { font-size: 0.875rem; }
+
+    [data-testid="stMetricValue"] { color: #93c5fd !important; font-weight: 600 !important; } /* Light blue */
+
+    .stButton button {
+        background-color: #3b82f6; /* Brighter blue */
+        color: #ffffff; font-weight: 600;
+        padding: 0.5rem 2rem; border-radius: 8px; border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .stButton button:hover { background-color: #60a5fa; }
+    .stButton button:active { background-color: #2563eb; } /* Added active state */
+
+    /* Specific prediction box border color handled inline */
+
+    /* Ensure toggle visibility */
+    [data-testid="stToggle"] label {
+        color: #e2e8f0 !important; /* Light text/emoji for dark mode */
+        display: flex; /* Align icon better */
+        align-items: center;
     }
 </style>
-""", unsafe_allow_html=True)
+"""
+
+# Apply the selected theme's CSS
+st.markdown(dark_theme_css if st.session_state.theme == 'dark' else light_theme_css, unsafe_allow_html=True)
 
 # --- Configuration ---
 MODELS_DIR = 'trained_models'
@@ -162,12 +171,34 @@ def load_resources():
 resources = load_resources()
 
 # --- Streamlit App Interface ---
-# st.set_page_config(layout="wide") # Moved to the top
-st.title("🏥 AI-Powered Disease Prediction")
+# Sidebar is kept clean, controls are in the main area or implicit
+
+# Callback function to update theme based on toggle state
+def update_theme():
+    # Read the current state of the toggle widget directly from session_state
+    is_dark = st.session_state.theme_toggle_main
+    st.session_state.theme = 'dark' if is_dark else 'light'
+
+# Main title and Theme Toggle
+col_title, col_toggle = st.columns([0.85, 0.15]) # Adjust ratio as needed
+with col_title:
+    st.title("🏥 AI-Powered Disease Prediction")
+with col_toggle:
+    st.markdown("<div class='toggle-container' style='margin-top: 25px;'>", unsafe_allow_html=True)
+    # Use the on_change callback
+    st.toggle(
+        "🌙",
+        key="theme_toggle_main", # State is stored here
+        on_change=update_theme,  # Function to call when toggled
+        help="Toggle Dark Mode"
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+    # Theme is now updated via the callback, no direct update here needed.
+
 st.markdown("""
 <div class='custom-card'>
-    <h3>Advanced Multi-Model Disease Prediction System</h3>
-    <p>This sophisticated system utilizes multiple AI models to analyze symptoms and provide accurate disease predictions.</p>
+    <h4>Advanced Multi-Model Disease Prediction System</h4>
+    <p>This system utilizes multiple AI models to analyze symptoms and provide potential disease predictions. Use the toggle (🌙) above to switch themes.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -283,17 +314,30 @@ if analyze_button:
             with col_pred:
                 for i, (disease, confidence) in enumerate(top_3_overall):
                     confidence_color = (
-                        "#15803d" if confidence >= 75 else  # Darker green
-                        "#b45309" if confidence >= 50 else  # Darker amber
-                        "#991b1b"  # Darker red
+                        # Adjusted colors for better visibility in both themes
+                        "#16a34a" if confidence >= 75 else  # Green 600
+                        "#f59e0b" if confidence >= 50 else  # Amber 500
+                        "#ef4444"  # Red 500
                     )
+                    border_color_dark = ( # Slightly lighter for dark mode contrast
+                        "#22c55e" if confidence >= 75 else  # Green 500
+                        "#facc15" if confidence >= 50 else  # Yellow 400
+                        "#f87171"  # Red 400
+                    )
+                    final_border_color = border_color_dark if st.session_state.theme == 'dark' else confidence_color
+
+                    # Determine text color based on confidence for better contrast inside the box
+                    text_color_light = "#1f2937" # Default dark text for light theme
+                    text_color_dark = "#e2e8f0" # Default light text for dark theme
+                    final_text_color = text_color_dark if st.session_state.theme == 'dark' else text_color_light
+                    final_score_color = "#94a3b8" if st.session_state.theme == 'dark' else "#4b5563" # Muted score color
 
                     st.markdown(f"""
-                    <div class='prediction-box' style='border-left: 5px solid {confidence_color};'>
-                        <div class='prediction-text' style='color: {confidence_color} !important;'>
-                            {["🥇", "🥈", "🥉"][i]} {disease}
+                    <div class='prediction-box' style='border-left: 5px solid {final_border_color};'>
+                        <div class='prediction-text' style='color: {final_text_color} !important;'>
+                            {["🥇", "🥈", "🥉"][i]} <strong>{disease}</strong>
                         </div>
-                        <div class='score-text'>
+                        <div class='score-text' style='color: {final_score_color} !important;'>
                             Confidence Score: {confidence:.1f}%
                         </div>
                     </div>
@@ -316,14 +360,14 @@ if analyze_button:
                             if i == 0:
                                 st.markdown(f"""
                                 <div class='model-details'>
-                                    <div class='prediction-text'>{cls}</div>
-                                    <div class='score-text'>{conf_pct:.1f}%</div>
+                                    <div class='prediction-text'><strong>{cls}</strong></div>
+                                    <div class='score-text'>{conf_pct:.1f}% Confidence</div>
                                 </div>
                                 """, unsafe_allow_html=True)
                             else:
                                 st.markdown(f"""
                                 <div class='caption-text'>
-                                    {cls} ({conf_pct:.1f}%)
+                                    &nbsp;&nbsp;• {cls} ({conf_pct:.1f}%)
                                 </div>
                                 """, unsafe_allow_html=True)
 
